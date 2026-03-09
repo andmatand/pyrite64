@@ -160,6 +160,8 @@ int main(int argc, char** argv)
     return (cliRes == CLI::Result::SUCCESS) ? 0 : -1;
   }
 
+  ctx.experimentalFeatures = CLI::isExperimentalEnabled();
+
   // start the version check in the background while the app is starting
   std::thread updateCheckThread([]() {
     try {

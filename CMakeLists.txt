@@ -264,6 +264,7 @@ add_executable(pyrite64 src/main.cpp
         src/editor/preferences.h
         src/editor/preferences.h
         src/editor/preferences.cpp
+        src/editor/pages/parts/assets/modelEditor.cpp
 )
 
 target_include_directories(pyrite64 PRIVATE
