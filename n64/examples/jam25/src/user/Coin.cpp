@@ -82,7 +82,7 @@ namespace P64::Script::CFEEDEA8CF251F94
     sfx.setVolume(0.3f);
     sfx.setSpeed(1.0f - Math::rand01()*0.1f);
 
-    obj.getScene().addObject("ParticlesCoin.pf"_asset, obj.pos);
+    obj.getScene().addObject("ParticlesCoin"_prefab, obj.pos);
     obj.remove();
   }
 
@@ -91,7 +91,7 @@ namespace P64::Script::CFEEDEA8CF251F94
     if(event.type == 1)
     {
       debugf("Event: Coin collected by id %ld\n", event.value);
-      obj.getScene().addObject("ParticlesCoin.pf"_asset, obj.pos);
+      obj.getScene().addObject("ParticlesCoin"_prefab, obj.pos);
     }
   }
 }

@@ -14,3 +14,14 @@ namespace P64::Assets
 consteval uint32_t operator"" _asset(const char *str, size_t len) {
   return P64::Assets::getAssetIndex(std::string_view{str, len});
 }
+
+consteval uint32_t operator"" _prefab(const char* str, size_t len)
+{
+  constexpr std::string_view suffix = ".pf";
+  char buffer[512]{};
+  for (size_t i = 0; i < len; ++i)buffer[i] = str[i];
+  for (size_t i = 0; i < suffix.size(); ++i)buffer[len + i] = suffix[i];
+  return P64::Assets::getAssetIndex(
+      std::string_view(buffer, len + suffix.size())
+  );
+}
