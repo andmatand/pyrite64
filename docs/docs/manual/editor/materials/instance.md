@@ -106,7 +106,7 @@ struct Placeholder
 };
 ``` 
 `tile` refers to the tile-settings and texture asset you can see in the UI.\
-This object can be modified in order to do effects like tile-scrolling or dynmaic textures.\
+This object can be modified in order to do effects like tile-scrolling or dynamic textures.\
 The `update()` method must then be called after making changes to apply them.\
 Note that you are not allowed to call `update()` multiple times per frame, please only do so once.
 
