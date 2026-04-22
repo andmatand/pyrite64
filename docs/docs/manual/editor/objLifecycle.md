@@ -182,7 +182,7 @@ So even if you enable an object that comes after you, it will only take effect t
 Skipping the draw also prevents the issue of drawing something\
 without a previous update call being done.
 
-### Enable/Disabe during init
+### Enable/Disable during init
 
 One special case to this is if an object state gets changed during a scene load.\
 The object being referenced might not be initialized yet, leading to inconsistencies.\
