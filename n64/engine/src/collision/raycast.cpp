@@ -31,11 +31,11 @@ namespace P64::Coll {
 
     float t = t1;
     if(t < 0.0f) {
-      t = t2;
-      if(t < 0.0f) return false;
+      if(t2 < 0.0f) return false;
+      t = 0.0f;
+    } else if(t > ray.maxDistance) {
+      return false;
     }
-
-    if(t > ray.maxDistance) return false;
 
     hit.didHit = true;
     hit.point = ray.origin + ray.dir * t;
@@ -79,16 +79,19 @@ namespace P64::Coll {
         float t1 = (local_box.min.v[i] - localRay.origin.v[i]) * ood;
         float t2 = (local_box.max.v[i] - localRay.origin.v[i]) * ood;
 
+        int face1 = i * 2; // Min face
+        int face2 = i * 2 + 1; // Max face
+
         if(t1 > t2) {
           std::swap(t1, t2);
-          hit_face = i * 2 + 1; // Max face
-        }
-        else {
-          hit_face = i * 2; // Min face
+          std::swap(face1, face2);
         }
 
-        tMin = t1 > tMin ? t1 : tMin;
-        tMax = t2 < tMax ? t2 : tMax;
+        if (t1 > tMin) {
+          tMin = t1;
+          hit_face = face1;
+        }
+        if (t2 < tMax) tMax = t2;
 
         if(tMin > tMax) return false; // No intersection
       }
@@ -96,9 +99,7 @@ namespace P64::Coll {
 
     if(tMin < 0.0f) {
       if(tMax < 0.0f || tMax > ray.maxDistance) return false;
-
-      tMin = tMax; // Ray starts inside box, clamp to exit point
-      hit_face = (hit_face & ~1) | 1; // Flip to opposite face
+      tMin = 0.0f; // Ray starts inside box; clamp to ray origin
     } else if(tMin > ray.maxDistance) {
       return false; // Intersection beyond max distance
     }
@@ -145,9 +146,10 @@ namespace P64::Coll {
       float t1 = (-b - sqrtDisc) / (2.0f * a);
       float t2 = (-b + sqrtDisc) / (2.0f * a);
 
-      float t = t1 > 0.0f ? t1 : t2;
+      float t = t1;
+      if(t < 0.0f && t2 >= 0.0f) t = 0.0f;
 
-      if( t > 0.0f && t < ray.maxDistance) {
+      if( t >= 0.0f && t <= ray.maxDistance) {
         fm_vec3_t hitPoint = localRay.origin + localRay.dir * t;
         if(fabsf(hitPoint.y) <= coll->capsuleShape().innerHalfHeight) {
           tCylinder = t;
@@ -238,6 +240,7 @@ namespace P64::Coll {
 
       for(int i = 0; i < 2; ++i) {
         float t = i == 0 ? t1 : t2;
+        if(i == 0 && t < 0.0f && t2 >= 0.0f) t = 0.0f;
         if(t < 0.0f || t > ray.maxDistance) continue;
 
         fm_vec3_t hitPoint = localRay.origin + localRay.dir * t;
@@ -246,7 +249,7 @@ namespace P64::Coll {
             tCylinder = t;
             cylinderNormal = {hitPoint.x, 0.0f, hitPoint.z};
             vec3NormalizeOrFallback(cylinderNormal, (-localRay.dir));
-          
+            break;
         }
       }
     }
@@ -328,11 +331,21 @@ namespace P64::Coll {
       float sqrtDisc = sqrtf(discriminant);
       float t1 = (-b - sqrtDisc) / (2.0f * a);
       float t2 = (-b + sqrtDisc) / (2.0f * a);
+      if (t1 > t2) std::swap(t1, t2);
 
       // check both intersection points
       for (int i = 0; i < 2; ++i) {
         float t = i == 0 ? t1 : t2;
-        if(t < 0.0f || t > ray.maxDistance || t >= tSide) continue;
+
+        if(t < 0.0f) {
+          if(i == 0 && t2 >= 0.0f) {
+            t = 0.0f; // Ray starts inside; clamp to 0
+          } else {
+            continue;
+          }
+        }
+
+        if(t > ray.maxDistance || t >= tSide) continue;
 
         fm_vec3_t hitPoint = localRay.origin + localRay.dir * t;
         if(hitPoint.y >= -coll->coneShape().halfHeight && hitPoint.y <= coll->coneShape().halfHeight) {
@@ -353,6 +366,7 @@ namespace P64::Coll {
           } else {
             sideNormal = {0.0f, 1.0f, 0.0f}; // Ray hits the tip of the cone
           }
+          break;
         }
       }
     }
@@ -435,8 +449,9 @@ namespace P64::Coll {
       const float v = invDet * fm_vec3_dot(&localRay.dir, &q);
       if(v < 0.0f || u + v > 1.0f) return;
 
-      const float t = invDet * fm_vec3_dot(&edge2, &q);
-      if(t < 0.0f || t > ray.maxDistance || t >= bestT) return;
+      float t = invDet * fm_vec3_dot(&edge2, &q);
+      if (t < 0.0f) t = 0.0f;
+      if (t > ray.maxDistance || t >= bestT) return;
 
       fm_vec3_t normal;
       fm_vec3_cross(&normal, &edge1, &edge2);
@@ -537,7 +552,9 @@ namespace P64::Coll {
     // Calculate t to intersection point
     float t = f * fm_vec3_dot(&edge2, &q);
 
-    if (t > FM_EPSILON && t <= ray.maxDistance) {
+    if (t >= -0.01f && t <= ray.maxDistance) {
+      if (t < 0.0f) t = 0.0f;
+
       hit.distance = t;
       hit.normal = tri_norm;
       if(a < 0.0f) {
