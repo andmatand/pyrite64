@@ -915,7 +915,7 @@ namespace P64::Coll {
       }
 
       // Try to match new contact to an existing point by proximity
-      float MATCH_DIST_SQ = 0.02f * scene->getPhysicsScale() * scene->getPhysicsScale(); // 2cm threshold (scaled)
+      float MATCH_DIST_SQ = 0.02f; // 2cm threshold (scaled)
       int matchedIdx = -1;
       float bestDistSq = MATCH_DIST_SQ;
       for(int i = 0; i < existing->pointCount; ++i) {
@@ -967,7 +967,7 @@ namespace P64::Coll {
       }
 
       // Force all non-target points through current-frame revalidation.
-      const float revalidationSeparationLimit = -0.05f * scene->getPhysicsScale();
+      const float revalidationSeparationLimit = -0.05f;
       for(int i = 0; i < existing->pointCount; ++i) {
         ContactPoint &cp = existing->points[i];
         if(i == targetIdx) continue;
@@ -1093,7 +1093,7 @@ namespace P64::Coll {
     cc->respondsB = false;
 
     int newCount = resultCount < MAX_CONTACT_POINTS_PER_PAIR ? resultCount : MAX_CONTACT_POINTS_PER_PAIR;
-    float MATCH_DIST_SQ = 0.02f * scene->getPhysicsScale() * scene->getPhysicsScale();
+    float MATCH_DIST_SQ = 0.02f;
     bool oldClaimed[MAX_CONTACT_POINTS_PER_PAIR] = {};
 
     for(int i = 0; i < newCount; ++i) {

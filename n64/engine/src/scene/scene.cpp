@@ -122,7 +122,7 @@ P64::Scene::Scene(uint16_t sceneId, Scene** ref)
     conf.gravity,
     conf.velocitySolverIterations,
     conf.positionSolverIterations,
-    conf.physicsScale
+    conf.physicsScale // TODO: Rename to gfxScale
   );
   loadScene();
 

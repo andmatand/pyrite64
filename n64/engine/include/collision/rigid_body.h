@@ -19,15 +19,15 @@ namespace P64::Coll {
   class CollisionScene;
 
   // Constants
-  constexpr float TERMINAL_SPEED = 100.0f; // Units per second, scaled by physicsScale when applied
+  constexpr float TERMINAL_SPEED = 100.0f; // Units per second
   constexpr float TERMINAL_ANGULAR_SPEED = 50.0f; // Radians per second
   constexpr float TERMINAL_ANGULAR_SPEED_SQ = TERMINAL_ANGULAR_SPEED * TERMINAL_ANGULAR_SPEED;
-  constexpr float POS_SLEEP_THRESHOLD = 0.01f; // Units moved, scaled by physicsScale when used
+  constexpr float POS_SLEEP_THRESHOLD = 0.01f; // Units moved
   constexpr float POS_SLEEP_THRESHOLD_SQ = POS_SLEEP_THRESHOLD * POS_SLEEP_THRESHOLD;
-  constexpr float SPEED_SLEEP_THRESHOLD = 0.8f; // Units per second, scaled by physicsScale when used
+  constexpr float SPEED_SLEEP_THRESHOLD = 0.8f; // Units per second
   constexpr float SPEED_SLEEP_THRESHOLD_SQ = SPEED_SLEEP_THRESHOLD * SPEED_SLEEP_THRESHOLD;
   constexpr float ROT_SIMILARITY_SLEEP_THRESHOLD = 0.9999988f;
-  constexpr float ANGULAR_SLEEP_THRESHOLD = 1.0f; // Radians per second, not scaled by physicsScale
+  constexpr float ANGULAR_SLEEP_THRESHOLD = 1.0f; // Radians per second
   constexpr float ANGULAR_SLEEP_THRESHOLD_SQ = ANGULAR_SLEEP_THRESHOLD * ANGULAR_SLEEP_THRESHOLD;
   constexpr float AMPLIFY_ANG_DAMPING_THRESHOLD = 0.015f; // Radians per second, below this angular velocity, amplification is applied to damping
   constexpr float AMPLIFY_ANG_DAMPING_THRESHOLD_SQ = AMPLIFY_ANG_DAMPING_THRESHOLD * AMPLIFY_ANG_DAMPING_THRESHOLD;
@@ -62,10 +62,10 @@ namespace P64::Coll {
     void init(P64::Object *object, float m);
 
     P64::Object *ownerObject() const { return owner_; }
-    fm_vec3_t *positionPtr() { return position_; }
-    const fm_vec3_t *positionPtr() const { return position_; }
-    fm_quat_t *rotationPtr() { return rotation_; }
-    const fm_quat_t *rotationPtr() const { return rotation_; }
+    const fm_vec3_t &position() const { return position_; }
+    const fm_quat_t &rotation() const { return rotation_; }
+    void setPosition(const fm_vec3_t &pos) { position_ = pos; }
+    void setRotation(const fm_quat_t &rot) { rotation_ = rot; }
 
     const fm_vec3_t &linearVelocity() const { return linearVelocity_; }
     const fm_vec3_t &angularVelocity() const { return angularVelocity_; }
@@ -96,7 +96,7 @@ namespace P64::Coll {
 
     bool hasLinearConstraints() const { return hasLinearConstraints_; }
     bool hasAngularConstraints() const { return hasAngularConstraints_; }
-    bool canApplyAngularResponse() const { return !isKinematic_ && rotation_ && !hasFlag(constraints_, Constraint::FreezeRotAll); }
+    bool canApplyAngularResponse() const { return !isKinematic_ && !hasFlag(constraints_, Constraint::FreezeRotAll); }
     bool isKinematic() const { return isKinematic_; }
     bool isSleeping() const { return isSleeping_; }
 
@@ -157,8 +157,8 @@ namespace P64::Coll {
     friend class CollisionScene;
 
     P64::Object *owner_{nullptr};
-    fm_vec3_t *position_{nullptr};
-    fm_quat_t *rotation_{nullptr};
+    fm_vec3_t position_{};
+    fm_quat_t rotation_{};
     Matrix3x3 invWorldInertiaTensor_{};
     Matrix3x3 rotationMatrix_{};
     Matrix3x3 inverseRotationMatrix_{};
