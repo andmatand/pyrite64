@@ -1732,7 +1732,7 @@ namespace P64::Coll {
           {
             scaled = rot * scaled;
           }
-          return scaled + pos;
+          return (scaled + pos) * getGfxScale();
         };
 
         for (uint16_t t = 0; t < meshCollider->triangleCount_; ++t)
@@ -1772,46 +1772,46 @@ namespace P64::Coll {
           {
           case ShapeType::Sphere:
             if (!isSleepingBody) col = color_t{0xFF, 0x00, 0x00, 0xFF};
-            Debug::drawSphere(collider->worldCenter_, collider->sphere_.radius, col);
+            Debug::drawSphere(collider->worldCenter_ * getGfxScale(), collider->sphere_.radius * getGfxScale(), col);
             break;
           case ShapeType::Box:
             if (!isSleepingBody) col = color_t{0x00, 0xFF, 0xFF, 0xFF};
-            Debug::drawOBB(collider->worldCenter_, collider->box_.halfSize, collider->owner_->rot, col);
+            Debug::drawOBB(collider->worldCenter_ * getGfxScale(), collider->box_.halfSize * getGfxScale(), collider->owner_->rot, col);
             break;
           case ShapeType::Capsule:
             if (!isSleepingBody) col = color_t{0x00, 0x80, 0xFF, 0xFF};
             Debug::drawCapsule(
-                collider->worldCenter_,
-                collider->capsule_.radius,
-                collider->capsule_.innerHalfHeight,
+                collider->worldCenter_ * getGfxScale(),
+                collider->capsule_.radius * getGfxScale(),
+                collider->capsule_.innerHalfHeight * getGfxScale(),
                 collider->owner_->rot,
                 col);
             break;
           case ShapeType::Cylinder:
             if (!isSleepingBody) col = color_t{0xFF, 0x80, 0x00, 0xFF};
             Debug::drawCylinder(
-                collider->worldCenter_,
-                collider->cylinder_.radius,
-                collider->cylinder_.halfHeight,
+                collider->worldCenter_ * getGfxScale(),
+                collider->cylinder_.radius * getGfxScale(),
+                collider->cylinder_.halfHeight * getGfxScale(),
                 collider->owner_->rot,
                 col);
             break;
           case ShapeType::Cone:
             if (!isSleepingBody) col = color_t{0xFF, 0x40, 0xA0, 0xFF};
             Debug::drawCone(
-                collider->worldCenter_,
-                collider->cone_.radius,
-                collider->cone_.halfHeight,
+                collider->worldCenter_ * getGfxScale(),
+                collider->cone_.radius * getGfxScale(),
+                collider->cone_.halfHeight * getGfxScale(),
                 collider->owner_->rot,
                 col);
             break;
           case ShapeType::Pyramid:
             if (!isSleepingBody) col = color_t{0xB0, 0xFF, 0x40, 0xFF};
             Debug::drawPyramid(
-                collider->worldCenter_,
-                collider->pyramid_.baseHalfWidthX,
-                collider->pyramid_.baseHalfWidthZ,
-                collider->pyramid_.halfHeight,
+                collider->worldCenter_ * getGfxScale(),
+                collider->pyramid_.baseHalfWidthX * getGfxScale(),
+                collider->pyramid_.baseHalfWidthZ * getGfxScale(),
+                collider->pyramid_.halfHeight * getGfxScale(),
                 collider->owner_->rot,
                 col);
             break;
