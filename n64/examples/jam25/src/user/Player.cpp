@@ -9,11 +9,12 @@
 #include "systems/dropShadows.h"
 #include "systems/sprites.h"
 #include "collision/attach.h"
+#include "collision/gfx_scale.h"
 #include "../p64/assetTable.h"
 
 namespace
 {
-  constexpr float MOVE_SPEED = 170.0f;
+  constexpr float MOVE_SPEED = 1.7f;
   constexpr float MOVE_SPEED_SLOWDOWN = 0.4f;
   constexpr float MOVE_YAW_LERP = 0.22f;
 
@@ -111,6 +112,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     }
 
     auto &rb = rb_comp->rigid_body;
+    float gfxScale = P64::Coll::getGfxScale();
 
     User::ctx.playerPos = obj.pos;
 
@@ -158,7 +160,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
       held = {};
     }
 
-    bool onFloor = data->floorCast.didHit && data->floorCast.distance < 26.0f && data->floorCast.normal.y > 0.4f;
+    bool onFloor = data->floorCast.didHit && data->floorCast.distance < 0.26f && data->floorCast.normal.y > 0.4f;
 
     data->jumpHeld = inp.btn.a;
     if(pressed.a) {
@@ -330,7 +332,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     {
       data->dustTimer = 0.1f + Math::rand01() * 0.3f;
       auto seed = (uint32_t)rand();
-      spawnParticles(rb.worldCenterOfMass(), seed % 3 + 1, seed, 40.0f, 0.5f);
+      spawnParticles(rb.worldCenterOfMass() * gfxScale, seed % 3 + 1, seed, 40.0f, 0.5f);
     }
 
     data->lastFramePos = obj.pos;
@@ -363,7 +365,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     auto rb_comp = obj.getComponent<Comp::RigidBody>();
     auto &rb = rb_comp->rigid_body;
 
-    if(rb.positionPtr()->y < -1000)
+    if(rb.position().y < -10)
     {
       obj.pos = data->lastSafePos;
       rb.setVelocity({});
@@ -375,9 +377,9 @@ namespace P64::Script::C17EA8EAB6CF1DEB
 
     obj.pos -= data->meshAttach.update(obj.pos);
 
-    Coll::Raycast ray = Coll::Raycast::create(rb.worldCenterOfMass(), {0.0f, -1.0f, 0.0f}, 500.0f, Coll::RaycastColliderTypeFlags::ALL, false, 0x08);
+    Coll::Raycast ray = Coll::Raycast::create(rb.worldCenterOfMass(), {0.0f, -1.0f, 0.0f}, 5.0f, Coll::RaycastColliderTypeFlags::ALL, false, 0x08);
     SceneManager::getCurrent().getCollision().raycast(ray, data->floorCast);
-    bool onFloor = data->floorCast.didHit && data->floorCast.distance < 30.0f && data->floorCast.normal.y > 0.4f;
+    bool onFloor = data->floorCast.didHit && data->floorCast.distance < 0.3f && data->floorCast.normal.y > 0.4f;
     bool canJump = onFloor || data->inAirTime < (1.0f / 60.0f * 4);
 
     if(onFloor) {
@@ -396,7 +398,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     if(nextVel.y < 0.0f) {
       data->isJumpEnd = true;
     }
-    if(nextVel.y > 1.0f && !data->isJumpEnd && !data->jumpHeld) {
+    if(nextVel.y > 0.01f && !data->isJumpEnd && !data->jumpHeld) {
       data->isJumpEnd = true;
     }
 
@@ -404,11 +406,11 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     nextVel.z *= MOVE_SPEED_SLOWDOWN;
 
     if(!data->isJumpEnd && data->jumpHeld) {
-      nextVel.y += 360.0f * fixedDeltaTime;
+      nextVel.y += 3.6f * fixedDeltaTime;
     }
 
     if(canJump && data->jumpRequested) {
-      nextVel.y += std::exp(1.0f / 60.0f * fixedDeltaTime) * 270.0f;
+      nextVel.y += std::exp(1.0f / 60.0f * fixedDeltaTime) * 2.7f;
       data->isJumpEnd = false;
       data->isMidJump = true;
 
@@ -473,8 +475,8 @@ namespace P64::Script::C17EA8EAB6CF1DEB
         auto posDiff = event.selfCollider->worldCenter() - event.hitCollider->worldCenter();
         fm_vec3_norm(&posDiff, &posDiff);
 
-        data->hurtVelocity = posDiff * 400.0f;
-        data->hurtVelocity.y = 40.f;
+        data->hurtVelocity = posDiff * 4.0f;
+        data->hurtVelocity.y = 0.4f;
       }
 
       hurt(obj, data, 1);
@@ -484,13 +486,14 @@ namespace P64::Script::C17EA8EAB6CF1DEB
   void draw(Object& obj, Data *data, float deltaTime)
   {
     // drop shadow
-    float shadowHeight = obj.pos.y - data->floorCast.point.y;
+    float floorY = data->floorCast.point.y * P64::Coll::getGfxScale();
+    float shadowHeight = obj.pos.y - floorY;
     shadowHeight *= 0.001f;
     shadowHeight = Math::clamp(shadowHeight, 0.0f, 1.0f);
     shadowHeight = 1.0f - shadowHeight;
     if(data->floorCast.didHit)
       User::DropShadows::addShadow(
-          {obj.pos.x, data->floorCast.point.y, obj.pos.z},
+          {obj.pos.x, floorY, obj.pos.z},
           data->floorCast.normal,
           0.55f * shadowHeight,
           1.0f);
