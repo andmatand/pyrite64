@@ -1703,7 +1703,7 @@ namespace P64::Coll {
       body->previousStepScale_ = body->owner_->scale;
 
       // Sync visual object with physics position
-      body->owner_->pos = body->position_ * gfxScale_;
+      body->owner_->pos = body->position_ * getGfxScale();
       body->owner_->rot = body->rotation_;
     }
 
