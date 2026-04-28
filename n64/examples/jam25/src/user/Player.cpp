@@ -76,6 +76,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
 
     float targetAnimBlend;
 
+    Coll::RigidBody* rigidBody;
     Coll::RaycastHit floorCast;
     Coll::Attach meshAttach;
     Comp::AnimModel *anim;
@@ -93,8 +94,11 @@ namespace P64::Script::C17EA8EAB6CF1DEB
   {
     sys_hw_memset((void*)data, 0, sizeof(Data));
 
+    auto rb_comp = obj.getComponent<Comp::RigidBody>();
+    data->rigidBody = &rb_comp->rigid_body;
+
     data->camPitch = 0.31f;
-    data->lastSafePos = obj.pos;
+    data->lastSafePos = data->rigidBody->position();
 
     User::ctx.controlledId = obj.id;
     User::ctx.healthTotal = 16;
@@ -104,15 +108,11 @@ namespace P64::Script::C17EA8EAB6CF1DEB
 
   void update(Object& obj, Data *data, float deltaTime)
   {
-    auto rb_comp = obj.getComponent<Comp::RigidBody>();
     if(data->anim == nullptr) {
       data->anim = obj.getComponent<Comp::AnimModel>();
       data->anim->setMainAnim(1);
       data->anim->setBlendAnim(0);
     }
-
-    auto &rb = rb_comp->rigid_body;
-    float gfxScale = P64::Coll::getGfxScale();
 
     User::ctx.playerPos = obj.pos;
 
@@ -312,7 +312,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     }
 
     if(onFloor && data->notMovingTime > 30.0_ms) {
-      data->lastSafePos = obj.pos;
+      data->lastSafePos = data->rigidBody->position();
     }
 
     // SFX- Hit floor impact
@@ -332,7 +332,8 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     {
       data->dustTimer = 0.1f + Math::rand01() * 0.3f;
       auto seed = (uint32_t)rand();
-      spawnParticles(rb.worldCenterOfMass() * gfxScale, seed % 3 + 1, seed, 40.0f, 0.5f);
+      float gfxScale = P64::Coll::getGfxScale();
+      spawnParticles(data->rigidBody->worldCenterOfMass() * gfxScale, seed % 3 + 1, seed, 40.0f, 0.5f);
     }
 
     data->lastFramePos = obj.pos;
@@ -362,22 +363,21 @@ namespace P64::Script::C17EA8EAB6CF1DEB
 
   void fixedUpdate(Object& obj, Data *data, float fixedDeltaTime)
   {
-    auto rb_comp = obj.getComponent<Comp::RigidBody>();
-    auto &rb = rb_comp->rigid_body;
-
-    if(rb.position().y < -10)
+    if(data->rigidBody->position().y < -10)
     {
-      obj.pos = data->lastSafePos;
-      rb.setVelocity({});
+      data->rigidBody->setPosition(data->lastSafePos);
+      data->rigidBody->setVelocity({});
       data->hurtVelocity = {};
       data->meshAttach = {};
     }
 
     if(obj.id != User::ctx.controlledId) return;
 
-    obj.pos -= data->meshAttach.update(obj.pos);
+    fm_vec3_t physicsPos = data->rigidBody->position();
+    fm_vec3_t diff = data->meshAttach.update(physicsPos);
+    data->rigidBody->setPosition(physicsPos - diff);
 
-    Coll::Raycast ray = Coll::Raycast::create(rb.worldCenterOfMass(), {0.0f, -1.0f, 0.0f}, 5.0f, Coll::RaycastColliderTypeFlags::ALL, false, 0x08);
+    Coll::Raycast ray = Coll::Raycast::create(data->rigidBody->worldCenterOfMass(), {0.0f, -1.0f, 0.0f}, 5.0f, Coll::RaycastColliderTypeFlags::ALL, false, 0x08);
     SceneManager::getCurrent().getCollision().raycast(ray, data->floorCast);
     bool onFloor = data->floorCast.didHit && data->floorCast.distance < 0.3f && data->floorCast.normal.y > 0.4f;
     bool canJump = onFloor || data->inAirTime < (1.0f / 60.0f * 4);
@@ -393,7 +393,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
       data->inAirTime += fixedDeltaTime;
     }
 
-    fm_vec3_t currVel = rb.linearVelocity();
+    fm_vec3_t currVel = data->rigidBody->linearVelocity();
     fm_vec3_t nextVel = currVel;
     if(nextVel.y < 0.0f) {
       data->isJumpEnd = true;
@@ -434,7 +434,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     data->hurtVelocity *= 0.8f;
     data->jumpRequested = 0;
     if(nextVel.x == currVel.x && nextVel.y == currVel.y && nextVel.z == currVel.z) return;
-      rb.setVelocity(nextVel);
+      data->rigidBody->setVelocity(nextVel);
   }
 
   void onEvent(Object& obj, Data *data, const ObjectEvent &event)
