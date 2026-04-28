@@ -112,11 +112,11 @@
       }
     ],
     "name": "Test-Player",
-    "physicsScale": 16.0,
     "physicsTickRate": 50,
     "positionSolverIterations": 9,
     "renderPipeline": 0,
-    "velocitySolverIterations": 9
+    "velocitySolverIterations": 9,
+    "visualUnitsPerMeter": 100.0
   },
   "graph": {
     "children": [

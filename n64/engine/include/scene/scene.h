@@ -61,7 +61,7 @@ namespace P64
     uint16_t physicsTickRate{};
 
     fm_vec3_t gravity{};
-    float physicsScale{};
+    float visualUnitsPerMeter{};
 
     uint8_t velocitySolverIterations{};
     uint8_t positionSolverIterations{};

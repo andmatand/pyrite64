@@ -3,6 +3,7 @@
  * @author Kevin Reier <https://github.com/Byterset>
  * @brief Contains the rigidBody definition, constants and related functions (see rigid_body.h)
  */
+#include "collision/gfx_scale.h"
 #include "collision/rigid_body.h"
 #include "collision/collision_scene.h"
 #include <cassert>
@@ -139,8 +140,8 @@ namespace P64::Coll {
     assertf(object, "RigidBody must be initialized with a valid owner object");
 
     owner_ = object;
-    position_ = &object->pos;
-    rotation_ = &object->rot;
+    position_ = object->pos * getInvGfxScale();
+    rotation_ = object->rot;
     aabbTreeNodeId_ = NULL_NODE;
     constraints_ = Constraint::None;
     sleepCounter_ = 0;
@@ -162,12 +163,8 @@ namespace P64::Coll {
 
     setMass(m);
 
-    if(rotation_) {
-      previousStepRotation_ = *rotation_;
-    }
-    if(position_) {
-      previousStepPosition_ = *position_;
-    }
+    previousStepRotation_ = rotation_;
+    previousStepPosition_ = position_;
     previousStepScale_ = object->scale;
   }
 
@@ -304,13 +301,10 @@ namespace P64::Coll {
     // Apply position constraints
     linearVelocity_ = constrainLinearWorld(linearVelocity_);
 
-    CollisionScene *scene = collisionSceneGetInstance();
-    float physicsScale = scene->getPhysicsScale();
-
     // Clamp to terminal speed
     float speedSq = fm_vec3_len2(&linearVelocity_);
-    if(speedSq > TERMINAL_SPEED * TERMINAL_SPEED * (physicsScale * physicsScale)) {
-      linearVelocity_ = linearVelocity_ * ((TERMINAL_SPEED * physicsScale) / sqrtf(speedSq));
+    if(speedSq > TERMINAL_SPEED * TERMINAL_SPEED) {
+      linearVelocity_ = linearVelocity_ * (TERMINAL_SPEED / sqrtf(speedSq));
     }
   }
 
@@ -365,32 +359,30 @@ namespace P64::Coll {
 
   void RigidBody::integratePosition(float fixedDt) {
     if(isKinematic_ || isSleeping_) return;
-    if(!position_) return;
 
     float dt = fixedDt * timeScale_;
-    previousStepPosition_ = *position_;
-    *position_ = *position_ + (linearVelocity_ * dt);
+    previousStepPosition_ = position_;
+    position_ += (linearVelocity_ * dt);
   }
 
   void RigidBody::integrateRotation(float fixedDt) {
     if(isKinematic_ || isSleeping_) return;
-    if(!rotation_) return;
     if(vec3IsZero(angularVelocity_)) return;
 
     float dt = fixedDt * timeScale_;
 
-    previousStepRotation_ = *rotation_;
+    previousStepRotation_ = rotation_;
 
     // Store old world center of mass for offset correction
-    fm_vec3_t oldWorldCOM = *position_ + (*rotation_ * centerOffset_);
+    fm_vec3_t oldWorldCOM = position_ + (rotation_ * centerOffset_);
 
-    *rotation_ = quatApplyAngularVelocity(*rotation_, angularVelocity_, dt);
+    rotation_ = quatApplyAngularVelocity(rotation_, angularVelocity_, dt);
 
     // Correct position so that the center of mass stays in place
     if(!vec3IsZero(centerOffset_)) {
-      fm_vec3_t newWorldCOM = *position_ + (*rotation_ * centerOffset_);
+      fm_vec3_t newWorldCOM = position_ + (rotation_ * centerOffset_);
       fm_vec3_t correction = oldWorldCOM - newWorldCOM;
-      *position_ = *position_ + correction;
+      position_ += correction;
     }
   }
 
@@ -451,14 +443,14 @@ namespace P64::Coll {
   }
 
   void RigidBody::updateWorldInertia() {
-    Matrix3x3 newRotationMatrix = rotation_ ? quatToMatrix3(*rotation_) : Matrix3x3::identity();
-    Matrix3x3 newInverseRotationMatrix = rotation_ ? quatToMatrix3(quatConjugate(*rotation_)) : Matrix3x3::identity();
+    Matrix3x3 newRotationMatrix = quatToMatrix3(rotation_);
+    Matrix3x3 newInverseRotationMatrix = quatToMatrix3(quatConjugate(rotation_));
 
     const Matrix3x3 localInv = diagonalMatrix(invLocalInertiaTensor_);
     Matrix3x3 newInvWorldInertiaTensor = matrix3Mul(matrix3Mul(newRotationMatrix, localInv), matrix3Transpose(newRotationMatrix));
 
     const fm_vec3_t worldOffset = matrix3Vec3Mul(newRotationMatrix, centerOffset_);
-    const fm_vec3_t newWorldCenterOfMass = position_ ? *position_ + worldOffset : worldOffset;
+    const fm_vec3_t newWorldCenterOfMass = position_ + worldOffset;
     const bool transformChanged = !matrix3Equals(rotationMatrix_, newRotationMatrix) ||
                     !matrix3Equals(inverseRotationMatrix_, newInverseRotationMatrix) ||
                     !matrix3Equals(invWorldInertiaTensor_, newInvWorldInertiaTensor) ||
@@ -468,9 +460,6 @@ namespace P64::Coll {
     inverseRotationMatrix_ = newInverseRotationMatrix;
     invWorldInertiaTensor_ = newInvWorldInertiaTensor;
 
-    if(rotation_) {
-      rotationMatrix_ = newRotationMatrix;
-    }
     refreshAngularConstraintProjection();
     refreshConstrainedInertiaTensor();
     worldCenterOfMass_ = newWorldCenterOfMass;
@@ -480,30 +469,25 @@ namespace P64::Coll {
   }
 
   fm_vec3_t RigidBody::toWorldSpace(const fm_vec3_t &localPoint) const {
-    if(!position_) return localPoint;
-    return *position_ + rotateToWorld(localPoint);
+    return position_ + rotateToWorld(localPoint);
   }
 
   fm_vec3_t RigidBody::toLocalSpace(const fm_vec3_t &worldPoint) const {
-    if(!position_) return worldPoint;
-    return rotateToLocal(worldPoint - *position_);
+    return rotateToLocal(worldPoint - position_);
   }
 
   fm_vec3_t RigidBody::rotateToWorld(const fm_vec3_t &localDir) const {
-    if(!rotation_) return localDir;
-    return *rotation_ * localDir;
+    return rotation_ * localDir;
   }
 
   fm_vec3_t RigidBody::rotateToLocal(const fm_vec3_t &worldDir) const {
-    if(!rotation_) return worldDir;
-    return quatConjugate(*rotation_) * worldDir;
+    return quatConjugate(rotation_) * worldDir;
   }
 
   void RigidBody::applyPositionConstraints() {
-    if(!position_) return;
-    if(hasFlag(constraints_, Constraint::FreezePosX)) position_->x = previousStepPosition_.x;
-    if(hasFlag(constraints_, Constraint::FreezePosY)) position_->y = previousStepPosition_.y;
-    if(hasFlag(constraints_, Constraint::FreezePosZ)) position_->z = previousStepPosition_.z;
+    if(hasFlag(constraints_, Constraint::FreezePosX)) position_.x = previousStepPosition_.x;
+    if(hasFlag(constraints_, Constraint::FreezePosY)) position_.y = previousStepPosition_.y;
+    if(hasFlag(constraints_, Constraint::FreezePosZ)) position_.z = previousStepPosition_.z;
   }
 
 } // namespace P64::Coll
