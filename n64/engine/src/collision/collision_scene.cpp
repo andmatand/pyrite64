@@ -853,6 +853,7 @@ namespace P64::Coll {
       if(substeps <= 1) continue;
 
       const fm_vec3_t originalPos = body->position_;
+      bool hit = false;
 
       // Test at intermediate substep positions along the predicted trajectory.
       // k=0 is the current position (handled by normal detection afterwards).
@@ -888,11 +889,15 @@ namespace P64::Coll {
             if(!collider->readsCollider(collB) && !collB->readsCollider(collider)) continue;
 
             RigidBody *rbB = findRigidBodyByOwner(collB->owner_);
-            if(collideDetectObjectToObject(collider, body, collB, rbB)) {
+            if(collideDetectObjectToObject(collider, body, collB, rbB, false)) {
               debugf("CCD substep %d/%d: body %u hit body %u", k, substeps, collider->owner_->id, collB->owner_->id);
+              hit = true;
+              break;
             }
           }
+          if (hit) break;
         }
+        if (hit) break;
 
         // Broadphase + narrowphase against mesh colliders
         for(MeshCollider *mesh : meshColliders_) {
@@ -901,22 +906,30 @@ namespace P64::Coll {
             if(!collider || !collider->owner_) continue;
             if(!collider->readsMeshCollider(mesh) && !mesh->readsCollider(collider)) continue;
             if(!aabbOverlap(collider->worldAabb_, mesh->worldAabb_)) continue;
-            if(collideDetectObjectToMesh(collider, body, *mesh)) {
+            if(collideDetectObjectToMesh(collider, body, *mesh, false)) {
               debugf("CCD substep %d/%d: body %u hit mesh %u", k, substeps, collider->owner_->id, mesh->owner_ ? static_cast<unsigned>(mesh->owner_->id) : 0u);
+              hit = true;
+              break;
             }
           }
+          if (hit) break;
         }
+        if (hit) break;
       }
 
-      // Restore original position and sync colliders back
-      body->position_ = originalPos;
-      for(Collider *collider : *ownerColliders) {
-        if(!collider) continue;
-        const fm_vec3_t prevCenter = collider->worldCenter_;
-        if(!collider->syncFromRigidBody(body->position_, body->rotation_)) continue;
-        const fm_vec3_t disp = collider->worldCenter_ - prevCenter;
-        if(collider->aabbTreeNodeId_ != NULL_NODE) {
-          colliderAABBTree.moveNode(collider->aabbTreeNodeId_, collider->worldAabb_, disp);
+      if (hit) {
+        body->setVelocity(VEC3_ZERO);
+      } else {
+        // Restore original position and sync colliders back
+        body->position_ = originalPos;
+        for(Collider *collider : *ownerColliders) {
+          if(!collider) continue;
+          const fm_vec3_t prevCenter = collider->worldCenter_;
+          if(!collider->syncFromRigidBody(body->position_, body->rotation_)) continue;
+          const fm_vec3_t disp = collider->worldCenter_ - prevCenter;
+          if(collider->aabbTreeNodeId_ != NULL_NODE) {
+            colliderAABBTree.moveNode(collider->aabbTreeNodeId_, collider->worldAabb_, disp);
+          }
         }
       }
     }
@@ -985,7 +998,7 @@ namespace P64::Coll {
               continue;
             }
           }
-          collideDetectObjectToObject(collider, rbA, collB, rbB);
+          collideDetectObjectToObject(collider, rbA, collB, rbB, true);
         }
       }
     }
@@ -1022,7 +1035,7 @@ namespace P64::Coll {
         //prevent perpetural collision checks of sleeping objects with meshes
         if(!mesh->transformChanged_ && rigidBodyA && rigidBodyA->isSleeping_ && !collA->isTrigger_)
           continue;
-        collideDetectObjectToMesh(collA, rigidBodyA, *mesh);
+        collideDetectObjectToMesh(collA, rigidBodyA, *mesh, true);
       }
 
     }
