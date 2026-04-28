@@ -95,7 +95,7 @@ namespace P64::Script::C17EA8EAB6CF1DEB
     sys_hw_memset((void*)data, 0, sizeof(Data));
 
     auto rb_comp = obj.getComponent<Comp::RigidBody>();
-    data->rigidBody = &rb_comp->rigid_body;
+    data->rigidBody = &rb_comp->getBody();
 
     data->camPitch = 0.31f;
     data->lastSafePos = data->rigidBody->position();

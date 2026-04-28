@@ -12,6 +12,8 @@
 #include "contact.h"
 #include <cstdint>
 #include <vector>
+
+#include "lib/types.h"
 #include "scene/object.h"
 
 namespace P64::Coll {
@@ -59,6 +61,9 @@ namespace P64::Coll {
   }
 
   struct RigidBody {
+    CLASS_NO_COPY_MOVE(RigidBody);
+    RigidBody() = default;
+
     void init(P64::Object *object, float m);
 
     P64::Object *ownerObject() const { return owner_; }

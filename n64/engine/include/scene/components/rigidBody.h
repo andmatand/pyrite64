@@ -17,7 +17,9 @@ namespace P64::Comp
   {
     static constexpr uint32_t ID = 11;
 
-    Coll::RigidBody rigid_body{};
+    private:
+      Coll::RigidBody rigidBody{};
+    public:
 
     static uint32_t getAllocSize([[maybe_unused]] uint16_t* initData)
     {
@@ -29,5 +31,7 @@ namespace P64::Comp
     static void onEvent(Object& obj, RigidBody* data, const ObjectEvent& event);
 
     static void update(Object& obj, RigidBody* data, float deltaTime);
+
+    Coll::RigidBody& getBody() { return rigidBody; }
   };
 }

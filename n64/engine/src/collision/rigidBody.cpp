@@ -1,5 +1,5 @@
 /**
- * @file rigid_body.cpp
+ * @file rigidBody.cpp
  * @author Kevin Reier <https://github.com/Byterset>
  * @brief Contains the rigidBody definition, constants and related functions (see rigidBody.h)
  */
