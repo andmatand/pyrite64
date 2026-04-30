@@ -196,7 +196,7 @@ namespace P64::Coll {
 
     const std::vector<Collider *> *ownerColliders = findCollidersForOwner(rigidBody->owner_);
     if(!ownerColliders || ownerColliders->empty()) {
-      rigidBody->applyCompoundProperties(VEC3_ZERO, fallbackInertia, rigidBody->owner_->scale);
+      rigidBody->applyCompoundProperties(rigidBody->localCenterOfMassOffset_, fallbackInertia, rigidBody->owner_->scale);
       return;
     }
 
@@ -209,12 +209,12 @@ namespace P64::Coll {
     }
 
     if(count <= 0) {
-      rigidBody->applyCompoundProperties(VEC3_ZERO, fallbackInertia, rigidBody->owner_->scale);
+      rigidBody->applyCompoundProperties(rigidBody->localCenterOfMassOffset_, fallbackInertia, rigidBody->owner_->scale);
       return;
     }
 
     const float invCount = 1.0f / static_cast<float>(count);
-    const fm_vec3_t worldCenter = worldCenterSum * invCount;
+    const fm_vec3_t worldCenter = (worldCenterSum * invCount) + (rigidBody->rotation_ * rigidBody->localCenterOfMassOffset_);
 
     fm_vec3_t localCenterOfMass = worldCenter - rigidBody->position_;
     localCenterOfMass = quatConjugate(rigidBody->rotation_) * localCenterOfMass;

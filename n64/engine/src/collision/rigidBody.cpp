@@ -154,6 +154,7 @@ namespace P64::Coll {
     acceleration_ = VEC3_ZERO;
     torqueAccumulator_ = VEC3_ZERO;
     localCenterOfMass_ = VEC3_ZERO;
+    localCenterOfMassOffset_ = VEC3_ZERO;
     compoundScale_ = object->scale;
     compoundPropertiesDirty_ = true;
 
