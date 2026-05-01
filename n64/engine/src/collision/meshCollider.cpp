@@ -326,14 +326,21 @@ namespace P64::Coll {
     }
 
     // Bind to owner object
-  collider->owner_ = obj;
+    collider->owner_ = obj;
 
-    // Build AABB tree from triangle bounding boxes
-    // Need 2*N-1 internal nodes for N leaves, plus some margin
-    int treeCapacity = static_cast<int>(header->triCount) * 2 + 1;
+    buildAabbTree(collider);
+    collider->syncOwnerTransform();
+
+    return collider;
+  }
+
+  // Build AABB tree from triangle bounding boxes
+  // Need 2*N-1 internal nodes for N leaves, plus some margin
+  void MeshCollider::buildAabbTree(MeshCollider* collider) {
+    int treeCapacity = static_cast<int>(collider->triangleCount_) * 2 + 1;
     collider->aabbTree_.init(treeCapacity);
 
-    for(uint32_t t = 0; t < header->triCount; ++t) {
+    for(uint32_t t = 0; t < collider->triangleCount_; ++t) {
       const fm_vec3_t &v0 = collider->vertices_[collider->triangles_[t].indices[0]];
       const fm_vec3_t &v1 = collider->vertices_[collider->triangles_[t].indices[1]];
       const fm_vec3_t &v2 = collider->vertices_[collider->triangles_[t].indices[2]];
@@ -348,6 +355,37 @@ namespace P64::Coll {
 
     collider->computeLocalRootAabb();
     collider->recalculateWorldAabb();
+  }
+
+  MeshCollider* MeshCollider::create(const fm_vec3_t* vertices, uint16_t vertCount, const uint16_t* indices, const fm_vec3_t* normals, uint16_t triCount, Object *obj) {
+    if (!vertices || vertCount == 0 || !indices || triCount == 0 || !obj) return nullptr;
+
+    auto *collider = new MeshCollider();
+    collider->triangleCount_ = triCount;
+    collider->vertexCount_ = vertCount;
+    collider->owner_ = obj;
+
+    // Copy vertex data
+    collider->vertices_ = new fm_vec3_t[vertCount];
+    for (uint32_t i = 0; i < vertCount; ++i) {
+      collider->vertices_[i] = vertices[i];
+    }
+
+    // Copy triangle indices
+    collider->triangles_ = new MeshTriangleIndices[triCount];
+    for (uint32_t t = 0; t < triCount; ++t) {
+      collider->triangles_[t].indices[0] = indices[t * 3 + 0];
+      collider->triangles_[t].indices[1] = indices[t * 3 + 1];
+      collider->triangles_[t].indices[2] = indices[t * 3 + 2];
+    }
+
+    // Copy normals
+    collider->normals_ = new fm_vec3_t[triCount];
+    for (uint32_t t = 0; t < triCount; ++t) {
+      collider->normals_[t] = normals[t];
+    }
+
+    buildAabbTree(collider);
     collider->syncOwnerTransform();
 
     return collider;
