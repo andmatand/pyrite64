@@ -121,9 +121,9 @@ namespace P64::Coll {
 
     /// Create a MeshCollider from manually defined geometry, binding to the given Object's transform.
     /// Coordinates must use internal physics scale (i.e. 1 unit = 1 meter).
-    /// The returned collider owns newly allocated arrays (vertices, triangles, normals).
-    /// Call destroyData() to free them.
-    static MeshCollider *create(const fm_vec3_t* vertices, uint16_t vertCount, const uint16_t* indices, const fm_vec3_t* normals, uint16_t triCount, Object *obj);
+    /// Ownership of the given arrays (vertices, triangleIndices) is transferred to the returned MeshCollider
+    /// object; call destroyData() to free them.
+    static MeshCollider* create(fm_vec3_t* vertices, uint16_t vertexCount, MeshTriangleIndices* triangleIndices, uint16_t triangleCount, Object *obj);
 
     static inline fm_vec3_t triangleNormalFromVertices(const fm_vec3_t &v0, const fm_vec3_t &v1, const fm_vec3_t &v2)
     {

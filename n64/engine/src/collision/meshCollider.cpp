@@ -357,32 +357,23 @@ namespace P64::Coll {
     collider->recalculateWorldAabb();
   }
 
-  MeshCollider* MeshCollider::create(const fm_vec3_t* vertices, uint16_t vertCount, const uint16_t* indices, const fm_vec3_t* normals, uint16_t triCount, Object *obj) {
-    if (!vertices || vertCount == 0 || !indices || triCount == 0 || !obj) return nullptr;
+  MeshCollider* MeshCollider::create(fm_vec3_t* vertices, uint16_t vertexCount, MeshTriangleIndices* triangleIndices, uint16_t triangleCount, Object *obj) {
+    if (!vertices || vertexCount == 0 || !triangleIndices || triangleCount == 0 || !obj) return nullptr;
 
     auto *collider = new MeshCollider();
-    collider->triangleCount_ = triCount;
-    collider->vertexCount_ = vertCount;
+    collider->vertices_ = vertices;
+    collider->vertexCount_ = vertexCount;
+    collider->triangles_ = triangleIndices;
+    collider->triangleCount_ = triangleCount;
     collider->owner_ = obj;
 
-    // Copy vertex data
-    collider->vertices_ = new fm_vec3_t[vertCount];
-    for (uint32_t i = 0; i < vertCount; ++i) {
-      collider->vertices_[i] = vertices[i];
-    }
-
-    // Copy triangle indices
-    collider->triangles_ = new MeshTriangleIndices[triCount];
-    for (uint32_t t = 0; t < triCount; ++t) {
-      collider->triangles_[t].indices[0] = indices[t * 3 + 0];
-      collider->triangles_[t].indices[1] = indices[t * 3 + 1];
-      collider->triangles_[t].indices[2] = indices[t * 3 + 2];
-    }
-
-    // Copy normals
-    collider->normals_ = new fm_vec3_t[triCount];
-    for (uint32_t t = 0; t < triCount; ++t) {
-      collider->normals_[t] = normals[t];
+    collider->normals_ = new fm_vec3_t[triangleCount];
+    for (uint16_t t = 0; t < triangleCount; ++t) {
+      const auto& indices = triangleIndices[t].indices;
+      fm_vec3_t v0 = vertices[indices[0]];
+      fm_vec3_t v1 = vertices[indices[1]];
+      fm_vec3_t v2 = vertices[indices[2]];
+      collider->normals_[t] = triangleNormalFromVertices(v0, v1, v2);
     }
 
     buildAabbTree(collider);
