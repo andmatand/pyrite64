@@ -6,6 +6,7 @@
 
 #include "imgui_internal.h"
 #include "../../context.h"
+#include "../../utils/proc.h"
 
 namespace
 {
@@ -37,6 +38,36 @@ bool ImGui::IconButton(const char* label, const ImVec2 &labelSize, const ImVec4 
   Text("%s", label);
 
   PopStyleColor(4);
+  return clicked;
+}
+
+bool ImGui::HelpIcon(const char* docPath, const char* tooltip, float glyphSize)
+{
+  const float btnWidth = glyphSize + 4_px;
+  const float rowHeight = GetFrameHeight();
+  const ImVec2 pos = GetCursorScreenPos();
+
+  PushID(docPath);
+  const bool clicked = InvisibleButton("##helpIcon", {btnWidth, rowHeight});
+  const bool hovered = IsItemHovered();
+  const bool held = IsItemActive();
+  PopID();
+
+  if (hovered) SetMouseCursor(ImGuiMouseCursor_Hand);
+
+  ImU32 col;
+  if (held)         col = GetColorU32(GetStyleColorVec4(ImGuiCol_DragDropTarget)); // pressed accent
+  else if (hovered) col = GetColorU32(ImGuiCol_Text, 1.0f);
+  else              col = GetColorU32(ImGuiCol_TextDisabled, 0.7f);
+
+  // vertically center the glyph within the row
+  const ImVec2 glyphPos{pos.x, pos.y + (rowHeight - glyphSize + 1.5_px) * 0.5f};
+  GetWindowDrawList()->AddText(GetFont(), glyphSize, glyphPos, col, ICON_MDI_HELP_CIRCLE_OUTLINE);
+
+  if (hovered && tooltip && tooltip[0]) SetTooltip("%s", tooltip);
+  if (clicked && docPath && docPath[0]) {
+    Utils::Proc::openURL(std::string{PYRITE_DOCS_URL} + docPath + ".html");
+  }
   return clicked;
 }
 

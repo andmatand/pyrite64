@@ -70,6 +70,11 @@ namespace ImGui
 
   bool IconButton(const char* label, const ImVec2 &labelSize, const ImVec4 &color = ImVec4{1,1,1,1});
 
+  // Faint help "?" icon, drawn at the current cursor position and vertically centered
+  // to the current row height.
+  // When clicked, opens the docs page at `docPath` (a slug relative to the docs root, e.g. "/manual/editor/components/code")
+  bool HelpIcon(const char* docPath, const char* tooltip = "Open Docs", float glyphSize = 19_px);
+
   inline bool IconToggle(bool &state, const char* labelOn, const char* labelOff, const ImVec2 &labelSize)
   {
     if(IconButton(

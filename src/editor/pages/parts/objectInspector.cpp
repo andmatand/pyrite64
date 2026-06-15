@@ -390,15 +390,28 @@ void Editor::ObjectInspector::draw() {
 
     auto &def = Project::Component::TABLE[comp.id];
     auto name = std::string{def.icon} + "  " + comp.name;
-    if (ImGui::CollapsingHeader(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+
+    ImGui::SetNextItemAllowOverlap();
+    bool headerOpen = ImGui::CollapsingHeader(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+    const bool locked = ImTable::isPrefabLocked(obj);
+    const bool headerRightClicked = !locked && ImGui::IsItemClicked(ImGuiMouseButton_Right);
+
+    // Faint help icon near the right edge of the header
+    if (def.docSlug && def.docSlug[0]) {
+      const float helpSize = 19_px;
+      ImGui::SameLine(ImGui::GetWindowWidth() - helpSize - 24_px);
+      ImGui::HelpIcon(def.docSlug, "Open Docs", helpSize);
+    }
+
+    if (headerOpen)
     {
-      if(!ImTable::isPrefabLocked(obj))
+      if(!locked)
       {
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        if (headerRightClicked) {
           ImGui::OpenPopup("CompCtx");
         }
 
-        if(ImGui::BeginPopupContextItem("CompCtx"))
+        if(ImGui::BeginPopup("CompCtx"))
         {
           if (ImGui::MenuItem(ICON_MDI_CONTENT_COPY " Duplicate")) {
             compCopy = &comp;
