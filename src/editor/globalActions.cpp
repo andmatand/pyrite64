@@ -10,6 +10,7 @@
 #include "../utils/logger.h"
 #include "../context.h"
 #include "../build/projectBuilder.h"
+#include "../project/graph/nodeRegistry.h"
 #include "../utils/fs.h"
 #include "../utils/json.h"
 #include "../utils/proc.h"
@@ -23,10 +24,13 @@ namespace Editor::Actions
   {
     registerAction(Type::PROJECT_OPEN, [](const std::string &path) {
        Utils::Logger::log("Open Project: " + path);
+       // Remember the outgoing project's open windows before it is torn down.
+       if(ctx.editorScene && ctx.project) ctx.editorScene->onProjectClosing();
        delete ctx.project;
        UndoRedo::getHistory().clear();
        try {
          ctx.project = new Project::Project(path);
+         // Custom node definitions (<project>/nodes/*.js) are loaded by the Project ctor.
          if(ctx.project && !ctx.project->getScenes().getEntries().empty()) {
            ctx.project->getScenes().loadScene(ctx.project->conf.sceneIdLastOpened);
          }

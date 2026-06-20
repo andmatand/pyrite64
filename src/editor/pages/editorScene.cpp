@@ -44,28 +44,80 @@ Editor::Scene::Scene()
   });
   needsSanityCheck = true;
 
+  loadSession();
+}
+
+Editor::Scene::~Scene()
+{
+  // The active project's windows are persisted when it is torn down (see persistOpenWindows).
+  Editor::Actions::registerAction(Editor::Actions::Type::OPEN_NODE_GRAPH, nullptr);
+}
+
+void Editor::Scene::loadSession()
+{
   try
   {
     auto json = Utils::JSON::loadFile(Utils::Proc::getAppDataPath() / "editorScene.json");
-    if(json.contains("winModels")) {
-      for(const auto& assetUUID : json["winModels"]) {
-        openModelEditor(assetUUID.get<uint64_t>());
+    if(json.contains("projects")) {
+      for(const auto& [path, w] : json["projects"].items()) {
+        WindowSet ws{};
+        if(w.contains("winModels")) for(const auto& u : w["winModels"]) ws.models.push_back(u.get<uint64_t>());
+        if(w.contains("winGraphs")) for(const auto& u : w["winGraphs"]) ws.graphs.push_back(u.get<uint64_t>());
+        sessionWindows[path] = std::move(ws);
       }
     }
   } catch(const std::exception& e) {}
 }
 
-Editor::Scene::~Scene()
+void Editor::Scene::saveSession()
 {
   nlohmann::json conf{};
-  conf["winModels"] = nlohmann::json::array();
-  for(const auto& [assetUUID, _] : modelEditors) {
-    conf["winModels"].push_back(assetUUID);
+  conf["projects"] = nlohmann::json::object();
+  for(const auto& [path, ws] : sessionWindows) {
+    conf["projects"][path] = { {"winModels", ws.models}, {"winGraphs", ws.graphs} };
   }
-
   Utils::FS::saveTextFile(Utils::Proc::getAppDataPath() / "editorScene.json", conf.dump(2));
+}
 
-  Editor::Actions::registerAction(Editor::Actions::Type::OPEN_NODE_GRAPH, nullptr);
+void Editor::Scene::persistOpenWindows()
+{
+  if(!ctx.project)return;
+  WindowSet ws{};
+  for(const auto& [assetUUID, _] : modelEditors) ws.models.push_back(assetUUID);
+  for(const auto& nodeEditor : nodeEditors) {
+    if(nodeEditor && nodeEditor->getAssetUUID() != 0) ws.graphs.push_back(nodeEditor->getAssetUUID());
+  }
+  sessionWindows[ctx.project->getPath()] = std::move(ws);
+  saveSession();
+}
+
+void Editor::Scene::closeAllEditors()
+{
+  nodeEditors.clear();
+  modelEditors.clear();
+  pendingNodeEditorCloseUUID = 0;
+  pendingNodeEditorClosePopup = false;
+}
+
+void Editor::Scene::onProjectClosing()
+{
+  persistOpenWindows();
+  closeAllEditors();
+  restoredForProject.clear();
+}
+
+void Editor::Scene::restoreWindows()
+{
+  auto it = sessionWindows.find(ctx.project->getPath());
+  if(it == sessionWindows.end())return;
+  for(auto uuid : it->second.models) {
+    if(ctx.project->getAssets().getEntryByUUID(uuid)) openModelEditor(uuid);
+  }
+  for(auto uuid : it->second.graphs) {
+    if(ctx.project->getAssets().getEntryByUUID(uuid)) {
+      nodeEditors.push_back(std::make_shared<NodeEditor>(uuid));
+    }
+  }
 }
 
 void Editor::Scene::openModelEditor(uint64_t assetUUID)
@@ -80,6 +132,13 @@ void Editor::Scene::openModelEditor(uint64_t assetUUID)
 
 void Editor::Scene::draw()
 {
+  // On a project switch, close the previous project's windows and restore this one's.
+  if(ctx.project && ctx.project->getPath() != restoredForProject) {
+    closeAllEditors();
+    restoredForProject = ctx.project->getPath();
+    restoreWindows();
+  }
+
   float HEIGHT_TOP_BAR = 28_px;
   float HEIGHT_STATUS_BAR = 24_px;
 
@@ -512,5 +571,6 @@ void Editor::Scene::save()
   for(auto &nodeEditor : nodeEditors) {
     nodeEditor->save();
   }
+  persistOpenWindows();
   UndoRedo::getHistory().markSaved();
 }
