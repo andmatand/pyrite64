@@ -116,40 +116,61 @@ namespace ImGui
     return idx;
   }
 
-  // Generic drag-drop target handler for combo boxes
-  // Validator signature: bool(uint64_t uuid, const char* payloadType)
-  // Returns true if a valid drop was accepted
+  /**
+   * Handles drag-and-drop over combo boxes.
+   * @tparam TId Target identifier type updated by the drop.
+   * @tparam TValidator Callable with signature bool(uint64_t uuid, const char* payloadType).
+   * @param targetId Identifier currently bound to the control.
+   * @param validator Payload validator for asset/object drops.
+   * @return true if a valid drop was accepted.
+   */
   template<typename TId, typename TValidator>
   bool HandleComboBoxDragDrop(TId& targetId, TValidator validator)
   {
+    // Current item is not an active target --> Do nothing
     if (!ImGui::BeginDragDropTarget()) return false;
-    
+
     bool changed = false;
-    
+
     // Handle ASSET payload
-    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET")) {
+    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET", ImGuiDragDropFlags_AcceptBeforeDelivery)) {
       uint64_t uuid = *((uint64_t*)payload->Data);
+      // Is an ASSET
       if (validator(uuid, "ASSET")) {
-        auto next = static_cast<TId>(uuid);
-        if (targetId != next) {
-          targetId = next;
-          changed = true;
+        // Mouse button released --> Commit new value
+        if (payload->Delivery) {
+          auto next = static_cast<TId>(uuid);
+          if (targetId != next) {
+            targetId = next;
+            changed = true;
+          }
         }
+      // Is not an ASSET --> Keep the field highlighted, but show that drop not allowed
+      } else {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
       }
     }
-    
-    // Handle OBJECT payload  
-    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("OBJECT")) {
+
+    // Handle OBJECT payload
+    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("OBJECT", ImGuiDragDropFlags_AcceptBeforeDelivery)) {
       uint32_t uuid = *((uint32_t*)payload->Data);
+      // Is an OBJECT
       if (validator(uuid, "OBJECT")) {
-        auto next = static_cast<TId>(uuid);
-        if (targetId != next) {
-          targetId = next;
-          changed = true;
+        // Mouse button released --> Commit new value
+        if (payload->Delivery) {
+          auto next = static_cast<TId>(uuid);
+          if (targetId != next) {
+            targetId = next;
+            changed = true;
+          }
         }
+      // Is not an OBJECT --> Keep the field highlighted, but show that drop not allowed
+      } else {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
       }
     }
-    
+
+    // Close the item-level target scope opened above
     ImGui::EndDragDropTarget();
     return changed;
   }
